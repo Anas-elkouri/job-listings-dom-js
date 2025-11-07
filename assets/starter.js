@@ -739,12 +739,30 @@ const saveAllJobs = () => {
      * @function renderManualFilterTags
      */
     const renderManualFilterTags = () => {
-        // TODO: Implement filter tags rendering
-        // Use this HTML template for each tag:
-        // `<div class="filter-bar__tag" data-tag="${tag}">
-        //     <span class="filter-bar__tag-name">${tag}</span>
-        //     <button class="filter-bar__tag-remove" aria-label="Remove filter ${tag}">✕</button>
-        //  </div>`
+       const filterBar = document.querySelector('.filter-bar__tags');
+
+       if(!activeFilters.length){
+        filterBar.innerHTML = '<p class="no-filters">No active filters.</p>';
+        return;
+       }
+
+       filterBar.innerHTML = activeFilters.map(tag => `
+         <div class="filter-bar__tag" data-tag="${tag}"></div>
+
+         <span class="filter-bar__tag-name">${tag}</span>
+        <button class="filter-bar__tag-remove" aria-label="Remove filter ${tag}">✕</button>
+
+        </div>
+       `).join('');
+
+       document.querySelectorAll('.filter-bar__tag-remove').forEach(btn =>{
+        btn.addEventListener('click', (e) => {
+        
+            const tag = e.target.closest('.filter-bar__tag').dataset.tag;
+            activeFilters = activeFilters.filter(t => t !== tag);
+            applyAllFilters();
+        });
+       });
     };
 
     /**
@@ -754,8 +772,17 @@ const saveAllJobs = () => {
      * @param {number} totalCount - Total number of jobs
      */
     const renderStats = (matchCount, totalCount) => {
-        // TODO: Implement stats rendering
-        // Show different messages based on active filters
+        const statsElement = document.getElementById('stats-counter');
+  
+  if (!statsElement) return;
+
+  if (activeFilters.length === 0) {
+    statsElement.textContent = `Showing all ${totalCount} jobs available`;
+  } else if (matchCount === 0) {
+    statsElement.textContent = `No jobs match your filters. Try removing some tags.`;
+  } else {
+    statsElement.textContent = `${matchCount} of ${totalCount} jobs match your filters`;
+  }
     };
 
     // ------------------------------------
@@ -767,11 +794,18 @@ const saveAllJobs = () => {
      * @function applyAllFilters
      */
     const applyAllFilters = () => {
-        // TODO: Implement comprehensive filtering
-        // 1. Get search term
-        // 2. Combine profile skills and manual filters
-        // 3. Filter jobs by tags and search term
-        // 4. Update all UI components
+       const searchTerm = searchInput.value.toLoweCase().trim();
+       const allFilters = [...profile.skills, ...manualFilters];
+
+        const filteredJobs = jobs.filter(job => {
+    const matchesSearch = job.position.toLowerCase().includes(searchTerm) ||
+                          job.company.toLowerCase().includes(searchTerm);
+    const matchesTags = allFilters.every(tag => job.tags.includes(tag));
+    return matchesSearch && matchesTags;
+  });
+        renderJobList(filteredJobs);
+        renderStats(filteredJobs.length, jobs.length);
+        renderManualFilterTags();
     };
 
     // ------------------------------------
@@ -784,11 +818,28 @@ const saveAllJobs = () => {
      * @param {Event} e - Click event
      */
     const handleJobListClick = (e) => {
-        // TODO: Implement job list click handling
-        // 1. Handle tag clicks (add to filters)
-        // 2. Handle favorite button clicks
-        // 3. Handle card clicks (open modal)
-    };
+  const tagBtn = e.target.closest('.job-tag');
+  const favBtn = e.target.closest('.favorite-btn');
+  const card = e.target.closest('.job-card');
+
+  if (tagBtn) {
+    const tag = tagBtn.textContent.trim();
+    if (!manualFilters.includes(tag)) {
+      manualFilters.push(tag);
+      applyAllFilters();
+    }
+  }
+
+  if (favBtn) {
+    const jobId = parseInt(favBtn.dataset.jobId);
+    toggleFavorite(jobId);
+  }
+
+  if (card && !favBtn && !tagBtn) {
+    const jobId = parseInt(card.dataset.jobId);
+    openJobModal(jobId);
+  }
+};
 
     /**
      * Handles filter bar clicks
@@ -796,20 +847,24 @@ const saveAllJobs = () => {
      * @param {Event} e - Click event
      */
     const handleFilterBarClick = (e) => {
-        // TODO: Implement filter removal
-        // Handle clicks on filter tag remove buttons
-    };
+  const removeBtn = e.target.closest('.filter-bar__tag-remove');
+  if (!removeBtn) return;
+
+  const tag = removeBtn.closest('.filter-bar__tag').dataset.tag;
+  manualFilters = manualFilters.filter(t => t !== tag);
+  applyAllFilters();
+};
 
     /**
      * Clears all manual filters
      * @function handleClearFilters
      */
-    const handleClearFilters = () => {
-        // TODO: Implement filter clearing
-        // 1. Clear manual filters array
-        // 2. Clear search input
-        // 3. Apply filters
-    };
+   const handleClearFilters = () => {
+  manualFilters = [];
+  searchInput.value = '';
+  applyAllFilters();
+};
+
 
     // ------------------------------------
     // --- INITIALIZATION ---
@@ -852,10 +907,16 @@ const saveAllJobs = () => {
         // Initial job display
         renderJobs(allJobs);
         
-        // TODO: Add remaining event listeners
-        // Profile events
-        // Filter events  
-        // Job list events
+         profileForm.addEventListener('submit', handleProfileFormSubmit);
+        profileSkillsList.addEventListener('click', handleSkillRemove);
+
+        filterBar.addEventListener('click', handleFilterBarClick);
+         clearFiltersBtn.addEventListener('click', handleClearFilters);
+        searchInput.addEventListener('input', applyAllFilters);
+
+        jobListingsContainer.addEventListener('click', handleJobListClick);
+        manageList.addEventListener('click', handleManageListClick);
+        manageJobForm.addEventListener('submit', handleManageFormSubmit);
     };
 
     // Start the application
