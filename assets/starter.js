@@ -17,10 +17,7 @@
 
 document.addEventListener('DOMContentLoaded', () => {
 
-    // ------------------------------------
-    // --- GLOBAL VARIABLES ---
-    // ------------------------------------
-    
+      
     /** @type {Array} All job listings loaded from data.json */
     let allJobs = [];
     
@@ -139,116 +136,85 @@ const saveAllJobs = () => {
         console.error("Error saving jobs to localStorage:", error);
     }
 };
-
     // ------------------------------------
     // --- FORM VALIDATION ---
     // ------------------------------------
 
-    profileForm.addEventListener( 'submit' , (e) => {
-
-         e.preventDefault();
-         clearErrors(profileForm);
-
-         const messages = [];
-
-         if (profileNameInput.value.trim() === ''){
-            messages.push('Name is required');
-            showError(profileNameInput, 'Name is required')
-         }
-
-         if (profilePositionInput .value.trim() === ''){
-            messages.push('profilePosition is required');
-            showError(profilePositionInput , 'profilePosition is required')
-         }
-
-         if(profileSkillsList.children.length < 1)
-         {
-            messages.push('At least 1 skills required');
-            showError(skillInput, 'At least 1 skill required');
-         }
-
-         if(messages.length === 0){
-            console.log('form is valid');
-         }
-
-    });
-    /**
+     /**
      * Shows error message for a form field
      * @function showError
      * @param {HTMLElement} input - The input element
      * @param {string} message - Error message to display
      */
     const showError = (input, message) => {
-      input.classList.add('input--error');
-      const errorSpan = input.parentElement.querySelector('.form-error');
-
-      if(errorSpan) errorSpan.textContent = message;
+        if (!input) return;
+        input.classList.add('input--error');
+        let err = input.parentElement && input.parentElement.querySelector('.error-message');
+        if (!err) {
+            err = document.createElement('div');
+            err.className = 'error-message';
+            input.parentElement.appendChild(err);
+        }
+        err.textContent = message || 'Invalid';
     };
 
-    /**
+     /**
      * Clears all errors from a form
      * @function clearErrors
      * @param {HTMLElement} form - The form element
      */
+
     const clearErrors = (form) => {
-       form.querySelectorAll('.input--error').forEach(i => i.classList.remove('input--error'));
-        form.querySelectorAll('.form-error').forEach(span => (span.textContent = ''));
+        if (!form) return;
+        form.querySelectorAll('.input--error').forEach(el => el.classList.remove('input--error'));
+        form.querySelectorAll('.error-message').forEach(el => el.remove());
     };
 
     /**
      * Validates the profile form
      * @function validateProfileForm
-     * @returns {boolean} True if valid, false otherwise
+     * @returns {boolean} 
      */
     const validateProfileForm = () => {
-       clearErrors(profileForm);
-
-       let isValid = true;
-
-       if(profileNameInput.value.trim() === ''){
-        showError(profileNameInput, 'Name is required');
-        isValid = false;
-       }
-
-
-       if (profilePositionInput.value.trim() === ''){
-        showError(profilePositionInput, 'Position is required');
-        isValid = false;
-       }
-
-       if(profileSkillsList.children.length < 1){
-        showError(skillInput, 'At least one skill required');
-        isValid = false;
-       }
-        return isValid;
+        clearErrors(profileForm);
+        let valid = true;
+        const name = profileNameInput?.value?.trim();
+        if (!name) {
+            showError(profileNameInput, 'Name is required');
+            valid = false;
+        }
+       
+        return valid;
     };
 
-    /**
+     /**
      * Validates the job management form
      * @function validateJobForm
      * @returns {boolean} True if valid, false otherwise
      */
+
     const validateJobForm = () => {
-       let isValid = true;
-       clearErrors(manageJobForm);
-
-       if(jobCompanyInput.value.trim() === '')
-       {
-        showError(jobCompanyInput, 'Company name is required');
-        isValid = false;
-       }
-
-       if(jobPositionInput.value.trim() === '')
-       {
-        showError(jobPositionInput, 'Position is required');
-        isValid = false;
-       }
-
-       if(jobLogoInput.value.match(/^https?:\/\/.+\.(jpg|jpeg|png|gif)$/i)){
-        showError(jobLogoInput, 'Invalid logo URL');
-        isValid = false;
-       }
-        return isValid;
+        clearErrors(manageJobForm);
+        let valid = true;
+        if (!jobCompanyInput.value.trim()) {
+            showError(jobCompanyInput, 'Company is required');
+            valid = false;
+        }
+        if (!jobPositionInput.value.trim()) {
+            showError(jobPositionInput, 'Position is required');
+            valid = false;
+        }
+      
+        const logo = jobLogoInput.value.trim();
+        if (logo) {
+            try {
+                new URL(logo);
+            } catch (err) {
+                showError(jobLogoInput, 'Logo must be a valid URL');
+                valid = false;
+            }
+        }
+        return valid;
     };
 
     // ------------------------------------
@@ -260,13 +226,11 @@ const saveAllJobs = () => {
      * @function saveProfile
      */
     const saveProfile = () => {
-       const prifile = {
-        name: profileNameInput.value.trim(),
-        position: profilePositionInput.value.trim(),
-        skills: Array.form(profileSkillsList.children).map(li => li.textContent),
-
-       };
-       localStorage.setItem('userProfile', j=JSON.stringify(profile));
+        try {
+            localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(userProfile));
+        } catch (err) {
+            console.error("Error saving profile:", err);
+        }
     };
 
     /**
@@ -274,53 +238,33 @@ const saveAllJobs = () => {
      * @function loadProfile
      */
     const loadProfile = () => {
-       const storedprofile = localStorage.getItem('userprofile');
-
-       if (!storedprofile) return;
-
-       const profile = JSON.parse(storedprofile);
-
-       profileNameInput.value = profile.name;
-
-       profilePositionInput.value = profile.position;
-
-       profile.skills.forEach(skill =>{
-        const li = document.creatElement('li');
-        li.textContent = skill;
-        profileSkillsList.appendChild(li);
-       });
-
+        try {
+            const stored = localStorage.getItem(PROFILE_STORAGE_KEY);
+            if (stored) {
+                userProfile = JSON.parse(stored);
+            } else {
+                userProfile = { name: '', position: '', skills: [] };
+            }
+        } catch (err) {
+            console.error("Error loading profile:", err);
+            userProfile = { name: '', position: '', skills: [] };
+        }
     };
 
     /**
      * Renders profile skills list
      * @function renderProfileSkills
      */
+
     const renderProfileSkills = () => {
-     
-        profileSkillsList.innerHTML = "";
-
-        userProfile.skills.forEach(skill => {
-            const li = document.creatElement('li');
-
-            li.className = "profile-skill-tag";
+        if (!profileSkillsList) return;
+        profileSkillsList.innerHTML = '';
+        (userProfile.skills || []).forEach(skill => {
+            const li = document.createElement('li');
+            li.className = 'profile-skill-tag';
             li.dataset.skill = skill;
-
-            li.innerHTML = `
-            <span>${skill}</span>
-            <button class="profile-skill-remove" aria-label="Remove skill ${skill}">X</button>
-            `;
-              profileSkillsList.appendChild(li);
-        });
-
-        document.querySelectorAll(' .profile-skill-remove').forEach(button => {
-            button.addEventListener('click', (e) => {
-                const skillToremove = e.target.parentElement.dataset.skill;
-
-                userProfile.skill = userProfile.skill.filter(s => s !== skillToremove);
-
-                renderProfileSkills();
-            });
+            li.innerHTML = `<span>${skill}</span><button class="profile-skill-remove" aria-label="Remove skill ${skill}">✕</button>`;
+            profileSkillsList.appendChild(li);
         });
     };
 
@@ -328,19 +272,12 @@ const saveAllJobs = () => {
      * Renders profile form with saved data
      * @function renderProfileForm
      */
+
     const renderProfileForm = () => {
-        const storedProfile = localStorage.getItem('userProfile');
-
-        if(!storedProfile) return;
-
-        const profile = JSON.parse(storedProfile);
-
-          profileNameInput.value = profile.name || '';
-          profilePositionInput.value = profile.position || '';
-          userProfile.skills = profile.skills || [];
-
-          renderProfileSkills();
-
+        if (!profileForm) return;
+        profileNameInput.value = userProfile.name || '';
+        profilePositionInput.value = userProfile.position || '';
+        renderProfileSkills();
     };
 
     /**
@@ -348,25 +285,16 @@ const saveAllJobs = () => {
      * @function handleProfileSave
      * @param {Event} e - Form submit event
      */
+
     const handleProfileSave = (e) => {
+        e?.preventDefault();
+        if (!validateProfileForm()) return;
+        userProfile.name = profileNameInput.value.trim();
+        userProfile.position = profilePositionInput.value.trim();
        
-        e.preventDefault();
-
-        const name = profileNameInput.value.trim();
-
-        const position = profilePositionInput.value.trim();
-
-        if(!name || !position)
-        {
-            alert("Please fill in all fields.");
-
-            return;
-        }
-
         saveProfile();
-
         renderProfileForm();
-
+        applyAllFilters();
     };
 
     /**
@@ -374,44 +302,40 @@ const saveAllJobs = () => {
      * @function handleSkillAdd
      * @param {KeyboardEvent} e - Keydown event
      */
+
     const handleSkillAdd = (e) => {
-       if (e.key === 'Entre'){
+        if (!skillInput) return;
+        if (e.key !== 'Enter') return;
         e.preventDefault();
-
-        const newSKill = profileSkillInput.value.trim();
-
-        if(!newSKill) return;
-
-        if (userProfile.skill.includes(newSKill)) {
-            alert("Skill already exists!");
-            return;
+        const val = skillInput.value.trim();
+        if (!val) return;
+        if (!userProfile.skills.includes(val)) {
+            userProfile.skills.push(val);
+            saveProfile();
+            renderProfileSkills();
+            applyAllFilters();
         }
-
-
-        userProfile.skill.push(newSKill);
-       profileSkillInput.value = '';
-
-       saveProfile();
-       }
-
-       
+        skillInput.value = '';
     };
 
-    /**
+     /**
      * Handles removing skills
      * @function handleSkillRemove
      * @param {Event} e - Click event
      */
     const handleSkillRemove = (e) => {
-       if (e.target.classList.contains('profile-skill-remove')) {
-    const skill = e.target.parentElement.dataset.skill;
-    userProfile.skills = userProfile.skills.filter(s => s !== skill);
-    renderProfileSkills();
-    saveProfile();
-  }
+        const btn = e.target.closest('.profile-skill-remove');
+        if (!btn) return;
+        const li = btn.closest('.profile-skill-tag');
+        if (!li) return;
+        const skill = li.dataset.skill;
+        userProfile.skills = (userProfile.skills || []).filter(s => s !== skill);
+        saveProfile();
+        renderProfileSkills();
+        applyAllFilters();
     };
 
-   // ------------------------------------
+    // ------------------------------------
     // --- FAVORITES MANAGEMENT ---
     // ------------------------------------
 
@@ -420,93 +344,93 @@ const saveAllJobs = () => {
      * @function saveFavorites
      */
     const saveFavorites = () => {
-        localStorage.setItem('favorites', JSON.stringify(favoriteJobIds));
+        try {
+            localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(favoriteJobIds));
+        } catch (err) {
+            console.error("Error saving favorites:", err);
+        }
     };
-
-    /**
+     /**
      * Loads favorites from localStorage
      * @function loadFavorites
      */
+
     const loadFavorites = () => {
-        const saved = localStorage.getItem('favorites');
-        favoriteJobIds = saved ? JSON.parse(saved) : [];
+        try {
+            const stored = localStorage.getItem(FAVORITES_STORAGE_KEY);
+            favoriteJobIds = stored ? JSON.parse(stored) : [];
+        } catch (err) {
+            console.error("Error loading favorites:", err);
+            favoriteJobIds = [];
+        }
     };
 
+    
     /**
      * Updates favorites count display
      * @function renderFavoritesCount
      */
-    const renderFavoritesCount = () => {
-      const countSpan = document.querySelector('#tab-favorites-count');
 
-      if(countSpan) countSpan.textContent = favoriteJobIds.length;
+    const renderFavoritesCount = () => {
+        if (!favoritesCount) return;
+        favoritesCount.textContent = String(favoriteJobIds.length || 0);
     };
 
-    /**
+      /**
      * Renders favorite jobs in favorites tab
      * @function renderFavoriteJobs
      */
     const renderFavoriteJobs = () => {
-         const favoriteContainer = document.getElementById('favorites-list');
-
+        if (!favoriteJobsContainer) return;
         const favoriteJobs = allJobs.filter(job => favoriteJobIds.includes(job.id));
-
-        if(favoriteJobs.length > 0){
-            favoriteContainer.innerHTML = favoriteJobs.map(createJobCardHTML).joing('');
-
+        if (favoriteJobs.length === 0) {
+            favoriteJobsContainer.innerHTML = '<p class="job-listings__empty">No favorite jobs yet.</p>';
+        } else {
+            favoriteJobsContainer.innerHTML = favoriteJobs.map(createJobCardHTML).join('');
         }
-        
-            else{
-             favoriteContainer.innerHTML =  '<p class="job-listings__empty">You have no favorite jobs yet.</p>';   
-            }
-
-             renderFavoritesCount();
     };
 
-    /**
+     /**
      * Toggles job favorite status
      * @function toggleFavorite
      * @param {number} jobId - Job ID to toggle
      */
     const toggleFavorite = (jobId) => {
-       
-        const index = favoriteJobIds.indexOf(jobId);
-
-        if(index !== -1){
-            favoriteJobIds.splice(index, 1);
-        }else{
-
-            favoriteJobIds.push(jobId);
-        }
-         saveFavorites();
-         renderFavoritesCount();
-         applyAllFilters();
+        jobId = Number(jobId);
+        const idx = favoriteJobIds.indexOf(jobId);
+        if (idx === -1) favoriteJobIds.push(jobId);
+        else favoriteJobIds.splice(idx, 1);
+        saveFavorites();
+        renderFavoritesCount();
+        // Update every job card favorite icons visible
+        document.querySelectorAll(`.job-card__favorite-btn[data-job-id="${jobId}"]`).forEach(btn => {
+            btn.textContent = favoriteJobIds.includes(jobId) ? '★' : '☆';
+            btn.classList.toggle('job-card__favorite-btn--active', favoriteJobIds.includes(jobId));
+        });
+        // Re-render favorites tab if active
+        const activeTab = tabsNav?.querySelector('.tab-item--active')?.dataset?.tab;
+        if (activeTab === 'favorites') renderFavoriteJobs();
     };
 
     // ------------------------------------
     // --- TAB NAVIGATION ---
     // ------------------------------------
 
-    /**
+     /**
      * Sets up tab navigation functionality
      * @function setupTabs
      */
     const setupTabs = () => {
+        if (!tabsNav) return;
         tabsNav.addEventListener('click', (e) => {
             const clickedTab = e.target.closest('.tab-item');
             if (!clickedTab) return;
-            
-            // Update active tab
             tabsNav.querySelectorAll('.tab-item').forEach(tab => tab.classList.remove('tab-item--active'));
             clickedTab.classList.add('tab-item--active');
-            
-            // Show/hide tab content
             const tabId = clickedTab.dataset.tab;
             tabContents.forEach(content => {
                 content.classList.toggle('tab-content--active', content.id === `tab-${tabId}`);
             });
-            
-            // Load tab-specific content
             if (tabId === 'favorites') renderFavoriteJobs();
             if (tabId === 'manage') renderManageList();
         });
@@ -516,173 +440,167 @@ const saveAllJobs = () => {
     // --- MODAL MANAGEMENT ---
     // ------------------------------------
 
+    
     /**
      * Opens job details modal
      * @function openViewModal
      * @param {number} jobId - Job ID to display
      */
     const openViewModal = (jobId) => {
-        const job = allJobs.find(j => j.id === jobId);
-        if (job) {
-            document.getElementById('modal-logo').src = job.logo || `https://api.dicebear.com/8.x/initials/svg?seed=${job.company}`;
-            document.getElementById('modal-position').textContent = job.position;
-            document.getElementById('modal-company').textContent = job.company;
-            document.getElementById('modal-description').textContent = job.description;
-            document.getElementById('modal-meta').innerHTML = `<li>${job.postedAt}</li><li>${job.contract}</li><li>${job.location}</li>`;
+        const job = allJobs.find(j => j.id === Number(jobId));
+        if (!job) return;
+        const logoEl = document.getElementById('modal-logo');
+        if (logoEl) logoEl.src = job.logo || `https://api.dicebear.com/8.x/initials/svg?seed=${job.company}`;
+        const pos = document.getElementById('modal-position'); if (pos) pos.textContent = job.position;
+        const comp = document.getElementById('modal-company'); if (comp) comp.textContent = job.company;
+        const desc = document.getElementById('modal-description'); if (desc) desc.textContent = job.description;
+        const meta = document.getElementById('modal-meta'); if (meta) meta.innerHTML = `<li>${job.postedAt}</li><li>${job.contract}</li><li>${job.location}</li>`;
+        const tagsEl = document.getElementById('modal-tags'); if (tagsEl) {
             const tags = [job.role, job.level, ...(job.skills || [])];
-            document.getElementById('modal-tags').innerHTML = tags.map(tag => `<span class="job-card__tag">${tag}</span>`).join('');
-            viewModal.style.display = 'flex';
+            tagsEl.innerHTML = tags.map(tag => `<span class="job-card__tag">${tag}</span>`).join('');
         }
+        if (viewModal) viewModal.style.display = 'flex';
     };
 
-    /**
+     /**
      * Closes job details modal
      * @function closeViewModal
      */
-    const closeViewModal = () => {
-        viewModal.style.display = 'none';
-    };
 
-    /**
+    const closeViewModal = () => { 
+    
+        if (viewModal) viewModal.style.display = 'none'; };
+        /**
      * Opens job management modal (add/edit)
      * @function openManageModal
      * @param {number|null} jobId - Job ID to edit, null for new job
      */
+
     const openManageModal = (jobId = null) => {
         clearErrors(manageJobForm);
         if (jobId) {
-            // Edit mode
-            const job = allJobs.find(j => j.id === jobId);
+            const job = allJobs.find(j => j.id === Number(jobId));
             if (!job) return;
             manageModalTitle.textContent = 'Edit Job';
             jobIdInput.value = job.id;
-            jobCompanyInput.value = job.company;
-            jobPositionInput.value = job.position;
+            jobCompanyInput.value = job.company || '';
+            jobPositionInput.value = job.position || '';
             jobLogoInput.value = job.logo || '';
-            jobContractInput.value = job.contract;
-            jobLocationInput.value = job.location;
-            jobRoleInput.value = job.role;
-            jobLevelInput.value = job.level;
+            jobContractInput.value = job.contract || '';
+            jobLocationInput.value = job.location || '';
+            jobRoleInput.value = job.role || '';
+            jobLevelInput.value = job.level || '';
             jobSkillsInput.value = (job.skills || []).join(', ');
-            jobDescriptionInput.value = job.description;
+            jobDescriptionInput.value = job.description || '';
         } else {
-            // Add mode
             manageModalTitle.textContent = 'Add New Job';
             manageJobForm.reset();
             jobIdInput.value = '';
         }
-        manageModal.style.display = 'flex';
+        if (manageModal) manageModal.style.display = 'flex';
     };
 
+    
     /**
      * Closes job management modal
      * @function closeManageModal
      */
+
     const closeManageModal = () => {
-        manageModal.style.display = 'none';
-    };
+         if (manageModal) manageModal.style.display = 'none'; 
+        };
 
     // ------------------------------------
     // --- JOB MANAGEMENT (CRUD) ---
     // ------------------------------------
 
-    /**
+     /**
      * Renders job management list
      * @function renderManageList
      */
     const renderManageList = () => {
-        const manageList = document.getElementById('manage-job-list');
-
-        if(!allJobs.length){
-            manageList.innerHTML = '<p class="job-listings__empty">No jobs available.</p>';
+        if (!manageJobsList) return;
+        if (!allJobs.length) {
+            manageJobsList.innerHTML = '<p class="job-listings__empty">No jobs to manage.</p>';
             return;
         }
-
-          manageList.innerHTML = allJobs.map(job => `
-         <li class="manage-job-item" data-job-id="${job.id}">
-        <img src="${job.logo}" alt="" class="job-card__logo" 
-             style="position: static; width: 48px; height: 48px; border-radius: 5px;">
-        <div class="manage-job-item__info">
-            <h4>${job.position}</h4>
-            <p>${job.company} - ${job.location}</p>
-        </div>
-        <div class="manage-job-item__actions">
-            <button class="btn btn--secondary btn-edit">Edit</button>
-            <button class="btn btn--danger btn-delete">Delete</button>
-        </div>
-    </li>
-    `).join('');
+        manageJobsList.innerHTML = allJobs.map(job => `
+            <li class="manage-job-item" data-job-id="${job.id}">
+                <img src="${job.logo || `https://api.dicebear.com/8.x/initials/svg?seed=${job.company}`}" alt="" class="job-card__logo" style="position: static; width: 48px; height: 48px; border-radius: 5px;">
+                <div class="manage-job-item__info">
+                    <h4>${job.position}</h4>
+                    <p>${job.company} - ${job.location}</p>
+                </div>
+                <div class="manage-job-item__actions">
+                    <button class="btn btn--secondary btn-edit">Edit</button>
+                    <button class="btn btn--danger btn-delete">Delete</button>
+                </div>
+            </li>
+        `).join('');
     };
 
-    /**
+     /**
      * Handles job form submission (add/edit)
      * @function handleManageFormSubmit
      * @param {Event} e - Form submit event
      */
+
     const handleManageFormSubmit = (e) => {
-          e.preventDefault(); 
-
-  const jobId = document.getElementById('job-id').value;
-  const jobData = {
-    id: jobId ? Number(jobId) : Date.now(),
-    company: document.getElementById('company').value,
-    logo: document.getElementById('logo').value,
-    position: document.getElementById('position').value,
-    location: document.getElementById('location').value,
-    postedAt: new Date().toISOString().split('T')[0],
-  };
-
-  if (jobId) {
-  
-    const index = allJobs.findIndex(job => job.id === Number(jobId));
-    allJobs[index] = jobData;
-  } else {
-    
-    allJobs.push(jobData);
-  }
-
-  
-  localStorage.setItem('jobs', JSON.stringify(allJobs));
-
- 
-  renderManageList();
-  applyAllFilters();
-  closeModal('manage-job-modal');
+        e.preventDefault();
+        if (!validateJobForm()) return;
+        const idVal = jobIdInput.value.trim();
+        let jobId = idVal ? Number(idVal) : null;
+        const newJob = {
+            id: jobId || (allJobs.length ? Math.max(...allJobs.map(j => j.id)) + 1 : 1),
+            company: jobCompanyInput.value.trim(),
+            position: jobPositionInput.value.trim(),
+            logo: jobLogoInput.value.trim(),
+            contract: jobContractInput.value.trim(),
+            location: jobLocationInput.value.trim(),
+            role: jobRoleInput.value.trim(),
+            level: jobLevelInput.value.trim(),
+            skills: jobSkillsInput.value.split(',').map(s => s.trim()).filter(Boolean),
+            description: jobDescriptionInput.value.trim(),
+            postedAt: new Date().toLocaleDateString(),
+            featured: false,
+            new: false
+        };
+        if (jobId) {
+            // update
+            allJobs = allJobs.map(j => j.id === jobId ? { ...j, ...newJob } : j);
+        } else {
+            // add
+            allJobs.push(newJob);
+        }
+        saveAllJobs();
+        renderJobs(allJobs);
+        renderManageList();
+        closeManageModal();
     };
 
-    /**
+
+     /**
      * Handles manage list clicks (edit/delete)
      * @function handleManageListClick
      * @param {Event} e - Click event
      */
     const handleManageListClick = (e) => {
-         const btn = e.target;
-  const li = btn.closest('.manage-job-item');
-  if (!li) return;
-
-  const jobId = Number(li.dataset.jobId);
-
-  
-  if (btn.classList.contains('btn-edit')) {
-    const job = allJobs.find(j => j.id === jobId);
-    document.getElementById('job-id').value = job.id;
-    document.getElementById('company').value = job.company;
-    document.getElementById('logo').value = job.logo;
-    document.getElementById('position').value = job.position;
-    document.getElementById('location').value = job.location;
-    openModal('manage-job-modal');
-  }
-
- 
-  if (btn.classList.contains('btn-delete')) {
-    if (confirm('Are you sure you want to delete this job?')) {
-      const index = allJobs.findIndex(j => j.id === jobId);
-      allJobs.splice(index, 1);
-      localStorage.setItem('jobs', JSON.stringify(allJobs));
-      renderManageList();
-      applyAllFilters();
-    }
-  }
+        const item = e.target.closest('.manage-job-item');
+        if (!item) return;
+        const jobId = Number(item.dataset.jobId);
+        if (e.target.matches('.btn-edit')) {
+            openManageModal(jobId);
+        } else if (e.target.matches('.btn-delete')) {
+            if (!confirm('Delete this job?')) return;
+            allJobs = allJobs.filter(j => j.id !== jobId);
+         
+            favoriteJobIds = favoriteJobIds.filter(id => id !== jobId);
+            saveAllJobs();
+            saveFavorites();
+            renderManageList();
+            renderJobs(allJobs);
+            renderFavoritesCount();
+        }
     };
 
     // ------------------------------------
@@ -697,12 +615,11 @@ const saveAllJobs = () => {
      */
     const createJobCardHTML = (job) => {
         const { id, company, logo, new: isNew, featured, position, role, level, postedAt, contract, location, skills } = job;
-        const tags = [role, level, ...(skills || [])];
+        const tags = [role, level, ...(skills || [])].filter(Boolean);
         const tagsHTML = tags.map(tag => `<span class="job-card__tag" data-tag="${tag}">${tag}</span>`).join('');
         const newBadge = isNew ? '<span class="job-card__badge job-card__badge--new">NEW!</span>' : '';
         const featuredBadge = featured ? '<span class="job-card__badge job-card__badge--featured">FEATURED</span>' : '';
         const featuredClass = featured ? 'job-card--featured' : '';
-        
         const isFavorite = favoriteJobIds.includes(id);
         const favoriteClass = isFavorite ? 'job-card__favorite-btn--active' : '';
         const favoriteIcon = isFavorite ? '★' : '☆';
@@ -723,66 +640,43 @@ const saveAllJobs = () => {
         `;
     };
 
-    /**
+     /**
      * Renders filtered jobs to main container
      * @function renderJobs
      * @param {Array} jobsToRender - Array of job objects to display
      */
     const renderJobs = (jobsToRender) => {
+        if (!jobListingsContainer) return;
         jobListingsContainer.innerHTML = jobsToRender.length > 0
             ? jobsToRender.map(createJobCardHTML).join('')
             : '<p class="job-listings__empty">No jobs match your search.</p>';
     };
 
-    /**
+     /**
      * Renders active filter tags
      * @function renderManualFilterTags
      */
+
     const renderManualFilterTags = () => {
-       const filterBar = document.querySelector('.filter-bar__tags');
-
-       if(!activeFilters.length){
-        filterBar.innerHTML = '<p class="no-filters">No active filters.</p>';
-        return;
-       }
-
-       filterBar.innerHTML = activeFilters.map(tag => `
-         <div class="filter-bar__tag" data-tag="${tag}"></div>
-
-         <span class="filter-bar__tag-name">${tag}</span>
-        <button class="filter-bar__tag-remove" aria-label="Remove filter ${tag}">✕</button>
-
-        </div>
-       `).join('');
-
-       document.querySelectorAll('.filter-bar__tag-remove').forEach(btn =>{
-        btn.addEventListener('click', (e) => {
-        
-            const tag = e.target.closest('.filter-bar__tag').dataset.tag;
-            activeFilters = activeFilters.filter(t => t !== tag);
-            applyAllFilters();
+        if (!filterTagsContainer) return;
+        filterTagsContainer.innerHTML = '';
+        manualFilters.forEach(tag => {
+            const div = document.createElement('div');
+            div.className = 'filter-bar__tag';
+            div.dataset.tag = tag;
+            div.innerHTML = `<span class="filter-bar__tag-name">${tag}</span><button class="filter-bar__tag-remove" aria-label="Remove filter ${tag}">✕</button>`;
+            filterTagsContainer.appendChild(div);
         });
-       });
+        filterBar?.classList.toggle('filter-bar--active', manualFilters.length > 0 || (userProfile.skills && userProfile.skills.length > 0));
     };
 
-    /**
-     * Updates statistics counter
-     * @function renderStats
-     * @param {number} matchCount - Number of matching jobs
-     * @param {number} totalCount - Total number of jobs
-     */
     const renderStats = (matchCount, totalCount) => {
-        const statsElement = document.getElementById('stats-counter');
-  
-  if (!statsElement) return;
-
-  if (activeFilters.length === 0) {
-    statsElement.textContent = `Showing all ${totalCount} jobs available`;
-  } else if (matchCount === 0) {
-    statsElement.textContent = `No jobs match your filters. Try removing some tags.`;
-  } else {
-    statsElement.textContent = `${matchCount} of ${totalCount} jobs match your filters`;
-  }
+        if (!statsCounter) return;
+        if ((manualFilters.length || (userProfile.skills && userProfile.skills.length))) {
+            statsCounter.textContent = `${matchCount} of ${totalCount} jobs match your filters`;
+        } else {
+            statsCounter.textContent = `${totalCount} jobs available`;
+        }
     };
 
     // ------------------------------------
@@ -794,131 +688,149 @@ const saveAllJobs = () => {
      * @function applyAllFilters
      */
     const applyAllFilters = () => {
-       const searchTerm = searchInput.value.toLoweCase().trim();
-       const allFilters = [...profile.skills, ...manualFilters];
+        const term = (searchInput?.value || '').trim().toLowerCase();
+        // combined filters: manualFilters + user skills
+        const combinedFilters = [...new Set([...(manualFilters || []), ...(userProfile.skills || [])])].map(f => f.toLowerCase());
 
-        const filteredJobs = jobs.filter(job => {
-    const matchesSearch = job.position.toLowerCase().includes(searchTerm) ||
-                          job.company.toLowerCase().includes(searchTerm);
-    const matchesTags = allFilters.every(tag => job.tags.includes(tag));
-    return matchesSearch && matchesTags;
-  });
-        renderJobList(filteredJobs);
-        renderStats(filteredJobs.length, jobs.length);
+        const filtered = allJobs.filter(job => {
+            // text search: company, position, description, location, tags
+            const hay = [
+                job.company || '',
+                job.position || '',
+                job.description || '',
+                job.location || '',
+                job.role || '',
+                job.level || '',
+                ...(job.skills || [])
+            ].join(' ').toLowerCase();
+
+            if (term && !hay.includes(term)) return false;
+
+            // filters: every filter must appear in hay (as word)
+            for (const f of combinedFilters) {
+                if (!hay.includes(f)) return false;
+            }
+            return true;
+        });
+
         renderManualFilterTags();
+        renderJobs(filtered);
+        renderStats(filtered.length, allJobs.length);
     };
 
     // ------------------------------------
     // --- EVENT HANDLERS ---
     // ------------------------------------
 
-    /**
+     /**
      * Handles clicks on job listings
      * @function handleJobListClick
      * @param {Event} e - Click event
      */
     const handleJobListClick = (e) => {
-  const tagBtn = e.target.closest('.job-tag');
-  const favBtn = e.target.closest('.favorite-btn');
-  const card = e.target.closest('.job-card');
+        // tag clicks -> add manual filter
+        const tag = e.target.closest('.job-card__tag')?.dataset?.tag;
+        if (tag) {
+            if (!manualFilters.includes(tag)) manualFilters.push(tag);
+            applyAllFilters();
+            return;
+        }
 
-  if (tagBtn) {
-    const tag = tagBtn.textContent.trim();
-    if (!manualFilters.includes(tag)) {
-      manualFilters.push(tag);
-      applyAllFilters();
-    }
-  }
+        // favorite button
+        const favBtn = e.target.closest('.job-card__favorite-btn');
+        if (favBtn) {
+            const id = Number(favBtn.dataset.jobId);
+            toggleFavorite(id);
+            return;
+        }
 
-  if (favBtn) {
-    const jobId = parseInt(favBtn.dataset.jobId);
-    toggleFavorite(jobId);
-  }
+        // open modal on card click (avoid clicks on buttons)
+        const card = e.target.closest('.job-card');
+        if (card && !e.target.closest('button')) {
+            const id = Number(card.dataset.jobId);
+            openViewModal(id);
+        }
+    };
 
-  if (card && !favBtn && !tagBtn) {
-    const jobId = parseInt(card.dataset.jobId);
-    openJobModal(jobId);
-  }
-};
-
-    /**
+      /**
      * Handles filter bar clicks
      * @function handleFilterBarClick
      * @param {Event} e - Click event
      */
+
     const handleFilterBarClick = (e) => {
-  const removeBtn = e.target.closest('.filter-bar__tag-remove');
-  if (!removeBtn) return;
+        const removeBtn = e.target.closest('.filter-bar__tag-remove');
+        if (removeBtn) {
+            const tagDiv = removeBtn.closest('.filter-bar__tag');
+            const tag = tagDiv?.dataset?.tag;
+            manualFilters = manualFilters.filter(t => t !== tag);
+            applyAllFilters();
+        }
+        if (e.target === clearFiltersBtn) {
+            handleClearFilters();
+        }
+    };
 
-  const tag = removeBtn.closest('.filter-bar__tag').dataset.tag;
-  manualFilters = manualFilters.filter(t => t !== tag);
-  applyAllFilters();
-};
-
-    /**
+     /**
      * Clears all manual filters
      * @function handleClearFilters
      */
-   const handleClearFilters = () => {
-  manualFilters = [];
-  searchInput.value = '';
-  applyAllFilters();
-};
 
+    const handleClearFilters = () => {
+        manualFilters = [];
+        if (searchInput) searchInput.value = '';
+        applyAllFilters();
+    };
 
     // ------------------------------------
     // --- INITIALIZATION ---
     // ------------------------------------
 
-    /**
+     /**
      * Initializes the application
      * @async
      * @function initializeApp
      */
     const initializeApp = async () => {
-        // TODO: Implement app initialization
-        // 1. Load saved data (profile, favorites)
-        // 2. Load job data
-        // 3. Render initial UI
-        // 4. Set up event listeners
-        // 5. Apply initial filters
-
-        // Load data
+        // load saved data
         loadProfile();
         loadFavorites();
         await loadAllJobs();
 
-        // Render initial UI
+        // render initial UI
         renderProfileForm();
         renderProfileSkills();
         renderFavoritesCount();
         setupTabs();
         applyAllFilters();
 
-        // Modal events
-        viewModalCloseBtn.addEventListener('click', closeViewModal);
-        viewModal.addEventListener('click', (e) => { if (e.target === viewModal) closeViewModal(); });
-        manageModalCloseBtn.addEventListener('click', closeManageModal);
-        manageModal.addEventListener('click', (e) => { if (e.target === manageModal) closeManageModal(); });
-        
-        // Management events
-        addNewJobBtn.addEventListener('click', () => openManageModal());
-        
-        // Initial job display
-        renderJobs(allJobs);
-        
-         profileForm.addEventListener('submit', handleProfileFormSubmit);
-        profileSkillsList.addEventListener('click', handleSkillRemove);
+        // modal events
+        viewModalCloseBtn?.addEventListener('click', closeViewModal);
+        viewModal?.addEventListener('click', (e) => { if (e.target === viewModal) closeViewModal(); });
+        manageModalCloseBtn?.addEventListener('click', closeManageModal);
+        manageModal?.addEventListener('click', (e) => { if (e.target === manageModal) closeManageModal(); });
 
-        filterBar.addEventListener('click', handleFilterBarClick);
-         clearFiltersBtn.addEventListener('click', handleClearFilters);
-        searchInput.addEventListener('input', applyAllFilters);
+        // management events
+        addNewJobBtn?.addEventListener('click', () => openManageModal());
+        manageJobsList?.addEventListener('click', handleManageListClick);
+        manageJobForm?.addEventListener('submit', handleManageFormSubmit);
 
-        jobListingsContainer.addEventListener('click', handleJobListClick);
-        manageList.addEventListener('click', handleManageListClick);
-        manageJobForm.addEventListener('submit', handleManageFormSubmit);
+        // profile events
+        profileForm?.addEventListener('submit', handleProfileSave);
+        skillInput?.addEventListener('keydown', handleSkillAdd);
+        profileSkillsList?.addEventListener('click', handleSkillRemove);
+
+        // job list & filter events
+        jobListingsContainer?.addEventListener('click', handleJobListClick);
+        filterBar?.addEventListener('click', handleFilterBarClick);
+        clearFiltersBtn?.addEventListener('click', handleClearFilters);
+        searchInput?.addEventListener('input', () => applyAllFilters());
+
+        // initial render manage list
+        renderManageList();
     };
 
-    // Start the application
+    // Start
     initializeApp();
+
 });
